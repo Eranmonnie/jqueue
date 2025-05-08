@@ -10,9 +10,9 @@ import (
 var RedisClient *redis.Client
 var ctx = context.Background()
 
-func InitRedis() {
+func InitRedis(port string) {
 	RedisClient = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     port,
 		Password: "", // No password by default
 		DB:       0,  // Default DB
 	})
