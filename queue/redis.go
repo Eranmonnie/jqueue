@@ -4,8 +4,8 @@ package queue
 import (
 	"context"
 	"fmt"
-	"github/Eranmonnie/jqueue/main/config"
-	"github/Eranmonnie/jqueue/main/jobs"
+	"github/Eranmonnie/jqueue/config"
+	"github/Eranmonnie/jqueue/jobs"
 	"log"
 	"time"
 )

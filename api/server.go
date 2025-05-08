@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github/Eranmonnie/jqueue/main/database"
+	"github/Eranmonnie/jqueue/database"
 	"log"
 	"net/http"
 	"time"

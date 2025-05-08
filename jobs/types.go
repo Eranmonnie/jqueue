@@ -2,7 +2,7 @@ package jobs
 
 import (
 	"encoding/json"
-	"github/Eranmonnie/jqueue/main/database"
+	"github/Eranmonnie/jqueue/database"
 )
 
 type Job struct {

@@ -2,9 +2,8 @@
 package worker
 
 import (
-	"github/Eranmonnie/jqueue/main/jobs"
-	"github/Eranmonnie/jqueue/main/queue"
-
+	"github/Eranmonnie/jqueue/jobs"
+	"github/Eranmonnie/jqueue/queue"
 	"log"
 	"time"
 )
