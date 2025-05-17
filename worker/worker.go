@@ -2,10 +2,12 @@
 package worker
 
 import (
+	"context"
 	"fmt"
 	"github/Eranmonnie/jqueue/jobs"
 	"github/Eranmonnie/jqueue/queue"
 	"log"
+	"math"
 	"sync"
 	"time"
 )
@@ -23,7 +25,6 @@ var Registry = &WorkerRegistry{
 	handlers: make(map[string]JobHandler),
 }
 
-// RegisterHandler adds a job handler function for a specific job type
 func (wr *WorkerRegistry) RegisterHandler(jobType string, handler JobHandler) {
 	wr.mutex.Lock()
 	defer wr.mutex.Unlock()
@@ -47,39 +48,74 @@ func (wr *WorkerRegistry) GetHandler(jobType string) (JobHandler, error) {
 }
 
 // Worker function
-func StartWorker(id int) {
-	log.Printf("Worker %d started", id)
+func StartWorkerPool(workerCount int) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	for {
-		job, err := queue.DequeueJob()
-		if err != nil {
-			log.Printf("Worker %d error: %v", id, err)
-			time.Sleep(2 * time.Second) // Retry delay
-			continue
-		}
-
-		log.Printf("Worker %d processing job %d of type %s", id, job.ID, job.Name)
-		processJob(job)
+	for i := range workerCount {
+		go runWorker(ctx, i)
 	}
 }
 
-// Process job based on type
-func processJob(job jobs.Job) {
+func runWorker(ctx context.Context, id int) {
+	log.Printf("Worker %d started", id)
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("Worker %d shutting down", id)
+			return
+		default:
+			// Process a job
+			job, err := queue.DequeueJob()
+			if err != nil {
+				log.Printf("Worker %d error: %v", id, err)
+				continue
+			}
+
+			processJobWithRetry(job)
+		}
+	}
+}
+
+func processJobWithRetry(job jobs.Job) {
+	retries := 0
+	maxRetries := job.MaxRetries
+
+	for retries <= maxRetries {
+		err := processJob(job)
+		if err == nil {
+			// Job succeeded
+			log.Printf("Job %d completed successfully", job.ID)
+			// database.MarkJobCompleted(job.ID, nil)
+			return
+		}
+
+		retries++
+		if retries > maxRetries {
+			// Give up after max retries
+			log.Printf("Job %d failed after %d retries: %v", job.ID, retries, err)
+			// database.MarkJobFailed(job.ID, []byte(fmt.Sprintf(`{"error": %q}`, err.Error())))
+			return
+		}
+
+		// Wait before retrying with exponential backoff
+		backoff := time.Duration(math.Pow(2, float64(retries))) * time.Second
+		time.Sleep(backoff)
+	}
+}
+
+func processJob(job jobs.Job) error {
 	handler, err := Registry.GetHandler(job.Name)
 	if err != nil {
-		log.Printf("Error processing job %d: %v", job.ID, err)
-		// Here you would update the job status to failed
-		return
+		return fmt.Errorf("no handler registered for job type: %s", job.Name)
 	}
 
 	// Execute the handler with the job payload
 	err = handler(job.Payload)
 	if err != nil {
-		log.Printf("Job %d failed: %v", job.ID, err)
-		// Update job status to failed with the error
-		return
+		return fmt.Errorf("job %d failed: %v", job.ID, err)
 	}
 
-	log.Printf("Job %d completed successfully", job.ID)
-	// Update job status to completed
+	return nil
 }
