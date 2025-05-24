@@ -25,12 +25,13 @@ var Registry = &WorkerRegistry{
 	handlers: make(map[string]JobHandler),
 }
 
-func (wr *WorkerRegistry) RegisterHandler(jobType string, handler JobHandler) {
+func (wr *WorkerRegistry) RegisterHandler(jobName string, handler JobHandler) error {
 	wr.mutex.Lock()
 	defer wr.mutex.Unlock()
 
-	wr.handlers[jobType] = handler
-	log.Printf("Registered handler for job type: %s", jobType)
+	wr.handlers[jobName] = handler
+	log.Printf("Registered handler for job type: %s", jobName)
+	return nil
 
 	//put the worker in the db just for the sake of it
 }
